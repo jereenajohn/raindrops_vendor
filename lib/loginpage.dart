@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:raindrops_vendor/api.dart';
 import 'package:raindrops_vendor/homepage.dart';
+import 'package:raindrops_vendor/registeration_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,8 +35,10 @@ class _LoginPageState extends State<LoginPage> {
     await prefs.setString('token', token);
   }
 
+ 
   Future<void> VendorLogin() async {
     try {
+
       var response = await http.post(
         Uri.parse('$url/api/login'),
         body: {"email": email.text, "password": password.text},
@@ -193,6 +196,20 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
+               TextButton(
+                
+                  onPressed: () {
+
+                    Navigator.push(context, MaterialPageRoute(builder: (context)=>Registeration()));
+                    // Navigate to Register page
+                    // You can implement your registration page here
+                    print('Register button pressed');
+                  },
+                  child: Text(
+                    'Register Now',
+                    style: TextStyle(color: Colors.green),
+                  ),
+                ),
               SizedBox(height: 10),
             ],
           ),

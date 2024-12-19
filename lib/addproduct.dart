@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:raindrops_vendor/addcategory.dart';
 import 'package:raindrops_vendor/viewproducts.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
 class Add_Product extends StatefulWidget {
   const Add_Product({super.key});
@@ -30,6 +31,8 @@ class _Add_ProductState extends State<Add_Product> {
   TextEditingController variantdescriptionController = TextEditingController();
   TextEditingController variantattributeValueController = TextEditingController();
 
+  TextEditingController variantstockController = TextEditingController();
+
   List<dynamic> categories = [];
   List<String> typeOptions = ["single", "variant"];
   List<String> attributes = ["weight", "liter", "piece"];
@@ -38,7 +41,7 @@ class _Add_ProductState extends State<Add_Product> {
   String? selectedCategoryId;
   String? selectedAttribute;
 
-  final String baseUrl = "https://plays-amplifier-das-ooo.trycloudflare.com";
+  final String baseUrl = "https://sphere-o-earthquake-illinois.trycloudflare.com";
 
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
@@ -48,6 +51,7 @@ class _Add_ProductState extends State<Add_Product> {
   void initState() {
     super.initState();
     getcategory();
+    getCompanyIdFromToken();
   }
   
 
@@ -69,12 +73,25 @@ class _Add_ProductState extends State<Add_Product> {
     }
   }
 
+
+  Future<String?> gettokenFromPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    print(prefs);
+
+    return prefs.getString('token');
+  }
+
   Future<void> getcategory() async {
     try {
+      final token = await gettokenFromPrefs();
+      print(token);
       final String url = "$baseUrl/api/category";
       print("Requesting URL: $url");
 
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url), headers: {
+          'Authorization': '$token',
+          'Content-Type': 'application/json',
+        },);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
@@ -110,6 +127,44 @@ class _Add_ProductState extends State<Add_Product> {
     return prefs.getString('token');
   }
 
+Future<String?> getCompanyIdFromToken() async {
+  // Get the token from SharedPreferences or any other source
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? token = prefs.getString('token');
+
+  if (token == null) {
+    print('Token is missing');
+    return null;
+  }
+
+  try {
+    // Decode the JWT
+    final jwt = JWT.decode(token);
+
+    print("=========>>>>>>>>>..$jwt");
+
+    // Extract the payload
+    final payload = jwt.payload;
+
+    print("ppppppppppppyyyyyyyyyyyyyyyy$payload");
+
+    String? companyId = payload['userId'];
+
+    print(companyId);
+
+    if (companyId != null) {
+      print('Company ID: $companyId');
+    } else {
+      print('Company ID not found in token');
+    }
+
+    return companyId;
+  } catch (e) {
+    print('Error decoding token: $e');
+    return null;
+  }
+}
+
   Future<void> addProduct() async {
     if (nameController.text.isEmpty ||
         priceController.text.isEmpty ||
@@ -129,12 +184,20 @@ class _Add_ProductState extends State<Add_Product> {
     try {
       var slug = nameController.text.toUpperCase().replaceAll(' ', '-');
       final token = await getTokenFromPrefs();
+        String? companyId = await getCompanyIdFromToken();
+
+    if (companyId == null || companyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Company ID is required')),
+      );
+      return;
+    }
       var request = http.MultipartRequest(
         'POST',
         Uri.parse("$baseUrl/api/add-product"),
       );
 
-      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Authorization'] = '$token';
       request.fields['name'] = nameController.text;
       request.fields['slug'] = slug;
       request.fields['price'] = priceController.text;
@@ -143,13 +206,14 @@ class _Add_ProductState extends State<Add_Product> {
       request.fields['type'] = selectedType!;
       request.fields['category'] = selectedCategoryId!;
       request.fields['stock'] = stockController.text;
+       request.fields['companyId'] = companyId; 
 
-      // Ensure this field name matches what the backend expects
-      Map<String, String> attributeMap = {
-        'type': selectedAttribute!,
-        'value': attributeValueController.text,
-      };
-      request.fields['selectedAttribute'] = json.encode(attributeMap);
+   Map<String, String> attributeMap = {
+  'type': selectedAttribute!, 
+  'value': attributeValueController.text,
+};
+request.fields['productAttribute'] = json.encode(attributeMap);
+
 
       request.files.add(
         await http.MultipartFile.fromPath(
@@ -168,12 +232,15 @@ class _Add_ProductState extends State<Add_Product> {
           );
           return;
         }
+      var slug = variantnameController.text.toUpperCase().replaceAll(' ', '-');
 
         List<Map<String, dynamic>> variantList = [
           {
+            'slug':slug,
             'name': variantnameController.text,
             'sale_price': variantsalePriceController.text,
             'description': variantdescriptionController.text,
+            'stock':variantstockController.text,
             'productAttribute': {
               'type': selectedAttribute,
               'value': variantattributeValueController.text,
@@ -181,21 +248,31 @@ class _Add_ProductState extends State<Add_Product> {
           }
         ];
 
-        request.fields['variants'] = json.encode(variantList);
+        print("yoooooooo================$variantList");
+         request.fields['variants[]'] = json.encode(variantList);  
 
-        if (_selectedImage1 != null) {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-              'image',
-              _selectedImage1!.path,
-            ),
-          );
-        }
+        print("Request Body: ${json.encode(variantList)}");
+
+
+        // if (_selectedImage1 != null) {
+        //   request.files.add(
+        //     await http.MultipartFile.fromPath(
+        //       'image',
+        //       _selectedImage1!.path,
+        //     ),
+        //   );
+        // }
+        // print("Selected Variant Image: ${_selectedImage1?.path}");
+
       }
 
       var response = await request.send();
 
+      print("-------------------$response");
+
       final responseBody = await response.stream.bytesToString();
+
+      print("=======================$responseBody");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -219,6 +296,7 @@ class _Add_ProductState extends State<Add_Product> {
           variantsalePriceController.clear();
           variantdescriptionController.clear();
           variantattributeValueController.clear();
+          variantstockController.clear();
           _selectedImage1 = null;
         });
 
@@ -511,6 +589,17 @@ class _Add_ProductState extends State<Add_Product> {
                             keyboardType: TextInputType.number,
                           ),
                           SizedBox(height: 16),
+                           TextField(
+                            controller: variantstockController,
+                            decoration: InputDecoration(
+                              labelText: 'Variant Stock',
+                              hintText: 'Enter Variant Stock',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
                           SizedBox(height: 16),
                           TextField(
                             controller: variantdescriptionController,
@@ -522,31 +611,31 @@ class _Add_ProductState extends State<Add_Product> {
                               ),
                             ),
                           ),
-                          SizedBox(
-                            height: 16,
-                          ),
-                          GestureDetector(
-                            onTap: _pickImage1,
-                            child: Container(
-                              width: double.infinity,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: _selectedImage1 != null
-                                  ? Image.file(
-                                      _selectedImage1!,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Center(
-                                      child: Text(
-                                        'Tap to add an image',
-                                        style: TextStyle(color: Colors.grey),
-                                      ),
-                                    ),
-                            ),
-                          ),
+                          // SizedBox(
+                          //   height: 16,
+                          // ),
+                          // GestureDetector(
+                          //   onTap: _pickImage1,
+                          //   child: Container(
+                          //     width: double.infinity,
+                          //     height: 50,
+                          //     decoration: BoxDecoration(
+                          //       border: Border.all(color: Colors.grey),
+                          //       borderRadius: BorderRadius.circular(8),
+                          //     ),
+                          //     child: _selectedImage1 != null
+                          //         ? Image.file(
+                          //             _selectedImage1!,
+                          //             fit: BoxFit.cover,
+                          //           )
+                          //         : Center(
+                          //             child: Text(
+                          //               'Tap to add an image',
+                          //               style: TextStyle(color: Colors.grey),
+                          //             ),
+                          //           ),
+                          //   ),
+                          // ),
                           SizedBox(height: 16),
                           DropdownButtonFormField<String>(
                             value: selectedAttribute,
@@ -585,7 +674,9 @@ class _Add_ProductState extends State<Add_Product> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             children: [
                               ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  addProduct();
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.black,
                                   foregroundColor: Colors.white, 

@@ -83,13 +83,13 @@ class _Register_Page_twoState extends State<Register_Page_two> {
             "district": district,
             "paymentOption":selectedpayment,
             "contact_number": widget.phone,
-            "email": widget.email,
+            "email": widget.email,  
             "password": password
           }));
 
-      print("EEEEEEEEERRRRRRRRRRRRRRRRRRR${response.body}");
+      print("EEEEEEEEERRRRRRRRRRRRRRRRRRRppppppppppppp${response.body}");
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
             content: Text('Registered Successfully.'),

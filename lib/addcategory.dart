@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:raindrops_vendor/api.dart';
 import 'package:raindrops_vendor/updatecategory.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Add_Category extends StatefulWidget {
   const Add_Category({super.key});
@@ -22,7 +23,7 @@ class _Add_CategoryState extends State<Add_Category> {
   List<dynamic> categories = [];
 
   final String baseUrl =
-      "https://plays-amplifier-das-ooo.trycloudflare.com/";
+      "https://sphere-o-earthquake-illinois.trycloudflare.com/";
 
   @override
   void initState() {
@@ -30,9 +31,27 @@ class _Add_CategoryState extends State<Add_Category> {
     getcategory();
   }
 
+  Future<String?> gettokenFromPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    print(prefs);
+
+    return prefs.getString('token');
+  }
+
   Future<void> getcategory() async {
     try {
-      final response = await http.get(Uri.parse("$url/api/category"));
+      final token = await gettokenFromPrefs();
+      print(token);
+
+      final response = await http.get(
+        Uri.parse("$url/api/category"),
+        headers: {
+          'Authorization': '$token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print("resssssssssssssssssssssssssss===========${response.body}");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
@@ -117,7 +136,7 @@ class _Add_CategoryState extends State<Add_Category> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Category deleted successfully')),
         );
-        getcategory(); 
+        getcategory();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete category')),
@@ -139,19 +158,17 @@ class _Add_CategoryState extends State<Add_Category> {
       });
     }
   }
- void _editCategory(String id) {
-  final categoryId = categories.firstWhere((cat) => cat['_id'] == id)['_id'];
-  print("Selected Category ID: $categoryId");
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => Update_Category(categoryid: categoryId),
-    ),
-  );
-}
 
-
- 
+  void _editCategory(String id) {
+    final categoryId = categories.firstWhere((cat) => cat['_id'] == id)['_id'];
+    print("Selected Category ID: $categoryId");
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Update_Category(categoryid: categoryId),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +177,6 @@ class _Add_CategoryState extends State<Add_Category> {
         title: Text('Add Category'),
         backgroundColor: Colors.grey[100],
         elevation: 0,
-        
         actions: [
           IconButton(
             icon: Icon(Icons.shopping_cart_outlined, color: Colors.black),
@@ -172,8 +188,7 @@ class _Add_CategoryState extends State<Add_Category> {
           ),
         ],
       ),
-
-        drawer: Drawer(
+      drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
@@ -206,11 +221,12 @@ class _Add_CategoryState extends State<Add_Category> {
             //     // Navigator.pop(context);
             //   },
             // ),
-              ListTile(
+            ListTile(
               leading: Icon(Icons.propane_tank),
               title: const Text('Add Product'),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context)=>Add_Product()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => Add_Product()));
                 // Handle navigation to home page
                 // Navigator.pop(context);
               },
@@ -341,7 +357,6 @@ class _Add_CategoryState extends State<Add_Category> {
                           : Container(),
                     ),
                     DataCell(
-                      
                       Row(
                         children: [
                           IconButton(
@@ -351,13 +366,10 @@ class _Add_CategoryState extends State<Add_Category> {
                           IconButton(
                             icon: Icon(Icons.delete, color: Colors.red),
                             onPressed: () => deleteCategory(category['_id']),
-
-                          
                           ),
                         ],
                       ),
                     ),
-                    
                   ]);
                 }).toList(),
               ),

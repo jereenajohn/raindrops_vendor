@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:raindrops_vendor/api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 
 
@@ -40,9 +42,24 @@ class _Update_CategoryState extends State<Update_Category> {
     print("============================${widget.categoryid}");
   }
 
+  
+  Future<String?> gettokenFromPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    print(prefs);
+
+    return prefs.getString('token');
+  }
+
+
   Future<void> fetchCategoryDetails() async {
     try {
-      final response = await http.get(Uri.parse("$url/api/category"));
+       final token = await gettokenFromPrefs();
+      print(token);
+      final response = await http.get(Uri.parse("$url/api/category"),
+       headers: {
+          'Authorization': '$token',
+          'Content-Type': 'application/json',
+        },);
 
       print("Request URL: $url/api/category");
 

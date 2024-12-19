@@ -49,7 +49,7 @@ class _View_ProductsState extends State<View_Products> {
 
         for (var productData in productsData) {
           String imageUrl =
-              "https://plays-amplifier-das-ooo.trycloudflare.com/${productData['image']}";
+              "https://solution-doors-annual-modes.trycloudflare.com/${productData['image']}";
 
           productsList.add({
             '_id': productData['_id'],
