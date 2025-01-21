@@ -44,12 +44,12 @@ class _LoginPageState extends State<LoginPage> {
         body: {"email": email.text, "password": password.text},
       );
 
-      print("RRRRRRRREEEEEEEEEEEEEWWWWWWWWWWWWWWWWWWWWWWW${response.body}");
+      print("RRRRRRRREEEEEEEEEEEEE${response.body}");
 
       if (response.statusCode == 200) {
         var responseData = jsonDecode(response.body);
 
-        print("AAAAAAAAAAAAAAAAAA========$responseData");
+        print("AAAAAAAAAAAAAAAAAA==$responseData");
 
         var status = responseData['message'];
 
